@@ -1,0 +1,38 @@
+---
+title: "Clean data"
+author: "Qinjing Kang"
+date: "2017/12/6"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load data
+
+
+```{r}
+#Load dataset
+mental.health <- read.csv("~/Desktop/survey.csv", header = TRUE, stringsAsFactors = TRUE)
+
+str(mental.health)
+```
+
+
+## Clean data
+
+```{r}
+#New variable names
+new.variables <-c("self_employed", "num_employees", "tech_company", "primary_role", "mental_health_coverage", "mental_health_options", "mental_health_formally_discussed", "mental_health_resources", "anonymity_protected", "medical_leave", "mental_health_negative", "physical_health_negative", "mental_health_comfort_coworker", "mental_health_comfort_supervisor", "mental_health_taken_seriously", "coworker_negative_consequences", "private_med_coverage", "resources", "reveal_diagnosis_clients_or_business", "revealed_negative_consequences_CB", "reveal_diagnosis_coworkers", "revealed_negative_consequences_CW", "productivity_effected", "percentage", "previous_employer", "prevemp_mental_health_coverage", "prevemp_mental_health_options", "prevemp_mental_health_formally_discussed", "prevemp_mental_health_resources", "prevemp_anonymity_protected", "prevemp_mental_health_negative","prevemp_physical_health_negative", "prevemp_mental_health_coworker", "prevemp_mental_health_comfort_supervisor", "prevemp_mental_health_taken_seriously", "prevemp_coworker_negative_consequences", "phsyical_issue_interview", "why_physical", "mental_health_interview", "why_mental", "career_hurt", "viewed_negatively_by_coworkers", "share_with_family", "observed_poor_handling", "observations_lead_less_likely_to_reveal", "family_history", "ever_had_mental_disorder", "currently_have_mental_disorder", "if_yes_what", "if_maybe_what", "medical_prof_diagnosis", "what_conditions", "sought_prof_treatment", "treatment_affects_work", "no_treatment_affects_work", "age", "gender", "country", "state", "country_work", "state_work", "work_position", "remote_work")
+
+#Change variable names
+colnames(mental.health) <-new.variables
+str(mental.health)
+
+head(table(mental.health$gender))
+
+```
+
+
+

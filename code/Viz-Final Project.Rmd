@@ -1,0 +1,223 @@
+---
+title: "Viz"
+author: "Qinjing Kang"
+date: "2018/1/26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(plotly)
+library(wesanderson)
+library(plyr)
+set.seed(1000)
+```
+
+### Load data
+
+
+```{r}
+#Load dataset
+mh <- read.csv("~/Desktop/survey2.csv", header = TRUE, stringsAsFactors = TRUE)
+
+str(mh)
+```
+
+### Cleaning the gender
+
+```{r}
+#head(mh$gender)
+#levels(mh$gender)
+#summary(mh$gender)
+
+#Standardise gender
+female = levels(mh$gender)[grep('(fe).*|^f$|fm|woman|female', levels(mh$gender), ignore.case = T, perl = T)]
+male  = levels(mh$gender)[grep('^m$|\bmale| male|mail|male |^male| man|\bman|^man$|masculine|dude|^male$', levels(mh$gender), ignore.case = T, perl = T)]
+mh$sex = mh$gender
+mh$sex[mh$sex %in% female] = 'female'
+mh$sex[mh$sex %in% male] = 'male'
+mh$sex[!(mh$sex %in% c('male', 'female'))]  = NA 
+summary(mh$sex %in% female)
+summary(mh$sex %in% male)
+summary(!(mh$sex %in% c(male, female)))
+
+mh$sex = droplevels(mh$sex)
+table(mh$sex)
+
+#Omit the NA data
+mh <- mh %>% filter(sex !="NA")
+```
+
+
+### Frequency
+
+Frequency Distribution and Histogram of all factors
+
+## Frequency Distribution of Number of employee
+
+```{r}
+# Omit the self-employeed data
+noofemployees <- mh %>% filter(num_employees !="0")
+# Make them to be ascending order
+noofemployees$num_employees <- factor(noofemployees$num_employees, levels = c("1 to 5","6 to 25","26-100","100-500","500-1000","More than 1000"))
+# Plot the distribution
+noemployees <- ggplot(noofemployees,aes(num_employees))
+noemployees + geom_bar() + geom_text(stat='count',aes(label=..count..),vjust=-1) + ggtitle("Distribution of Number of Employees") + xlab("Number of Employees") + theme_bw()
+```
+
+## Frequency Distribution of Tech-company
+
+```{r}
+# Omit the self-employeed data
+techcomp <- mh %>% filter(tech_company !="n/a")
+# Plot the distribution
+techcom <- ggplot(techcomp,aes(tech_company))
+techcom + geom_bar() + geom_text(stat='count',aes(label=..count..),vjust=-1) + ggtitle("Distribution of Tech Company Or Not") + xlab("0 is No, 1 is Yes") + theme_bw() 
+```
+
+## Frequency Distribution of Primary Role
+
+```{r}
+# Omit the self-employeed data
+primaryrole <- mh %>% filter(primary_role !="n/a")
+# Plot the distribution
+prirole <- ggplot(primaryrole,aes(primary_role))
+prirole + geom_bar() + geom_text(stat='count',aes(label=..count..),vjust=-1) + ggtitle("Distribution of Primary Role is Tech Or Not") + xlab("0 is No, 1 is Yes") + theme_bw()
+```
+
+## Frequency Distribution of Currently Have Mental Disorder Or Not
+
+```{r}
+# Plot the distribution
+CHMD <- ggplot(mh,aes(currently_have_mental_disorder))
+CHMD + geom_bar() + geom_text(stat='count',aes(label=..count..),vjust=-1) + ggtitle("Distribution of Currently Have Mental Disorder Or Not") + xlab("") + theme_bw()
+```
+
+## Frequency Distribution of Age
+
+```{r}
+summary(mh$age)
+
+#Replace the incorrect data with median age
+mh[which(mh$age == 3), "age"] <- 33
+mh[which(mh$age == 323), "age"] <- 33
+
+# Plot the distribution
+ggplot(mh, aes(age)) + geom_histogram() + geom_text(stat='count',aes(label=..count..),vjust=-1) +  ggtitle("Distribution of Ages") + xlab("Age") + theme_bw()
+
+```
+
+## Frequency Distribution of Country Worked
+
+```{r}
+# Plot the distribution
+CW <- ggplot(mh,aes(country_work))
+CW + geom_bar() + geom_text(stat='count',aes(label=..count..),vjust=-1) + ggtitle("Distribution of Country Worked") + xlab("Country Worked") + theme(axis.text = element_text(angle = 90, hjust = 1))
+```
+
+## Frequency Distribution of Remote Work Or Not
+
+```{r}
+# Plot the distribution
+RW <- ggplot(mh,aes(remote_work))
+RW + geom_bar() + geom_text(stat='count',aes(label=..count..),vjust=-1) + ggtitle("Distribution of Remote Work Or Not") + theme_bw()
+```
+
+### Does Company Size matters?
+
+```{r}
+# Group by currently have mental disorder
+Company.size <- noofemployees %>% group_by(num_employees,currently_have_mental_disorder)
+# Plot
+ggplot(Company.size, aes(currently_have_mental_disorder)) + geom_bar() + facet_wrap(~num_employees, scales = "free_y") +
+        ggtitle("How many workers Current have mental disorder in different size company?") +
+        xlab("Currently with mental disorder?") +
+        theme_bw()
+# Calculate counts and frequencies
+detach("package:plyr", unload=TRUE) 
+library(dplyr)
+freq1 <- Company.size %>%
+  group_by(num_employees,currently_have_mental_disorder) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+# Plot Frequencies
+pfreq1 <- ggplot(freq1, aes(x = num_employees, y = freq, fill = currently_have_mental_disorder)) + geom_bar(stat = "identity") +  xlab("Company Size") + ylab("Frequency") 
+ggplotly(pfreq1)
+# Is there any relationship between Company Size and Mental Disorder?
+# H0:NO
+# H1:YES
+chisq.test(table(noofemployees$num_employees,noofemployees$currently_have_mental_disorder))
+```
+Based the result of chi-squared, reject H0, there's no relationship between company size and mental disorder
+
+### Does tech company or not matters?
+
+```{r}
+# Group by currently have mental disorder
+Tech.company <- techcomp %>% group_by(sex,currently_have_mental_disorder)
+# Plot
+ggplot(Tech.company, aes(currently_have_mental_disorder)) + geom_bar() + facet_wrap(~tech_company, scales = "free_y") +
+        ggtitle("How many employees Current have mental disorder in tech company") +
+        xlab("Currently with mental disorder?") +
+        theme_bw()
+# Calculate counts and frequencies
+freq2 <- Tech.company %>%
+  group_by(sex,currently_have_mental_disorder) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+freq2
+# Plot Frequencies
+pfreq2 <- ggplot(freq2, aes(x = sex, y = freq, fill = currently_have_mental_disorder)) + geom_bar(stat = "identity") +  xlab("Gender") + ylab("Frequency") 
+ggplotly(pfreq2)
+
+```
+Female workers in tech company suffer more from mental disorder.
+
+### Does tech role or not matters?
+
+```{r}
+# Group by currently have mental disorder
+Tech.role <- primaryrole %>% group_by(sex,currently_have_mental_disorder)
+# Plot
+ggplot(Tech.role, aes(currently_have_mental_disorder)) + geom_bar() + facet_wrap(~sex, scales = "free_y") +
+        ggtitle("How many tech workers current have mental disorder") +
+        xlab("Currently with mental disorder?") +
+        theme_bw()
+# Calculate counts and frequencies
+freq3 <- Tech.role %>%
+  group_by(sex,currently_have_mental_disorder) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+freq3
+# Plot Frequencies
+pfreq3 <- ggplot(freq3, aes(x = sex, y = freq, fill = currently_have_mental_disorder)) + geom_bar(stat = "identity") +  xlab("Gender") + ylab("Frequency") 
+ggplotly(pfreq3)
+```
+Female tech workers suffer more from mental disorder.
+
+### Does age matters?
+
+```{r}
+# Replace 99 with median 33
+mh[which(mh$age == 99), "age"] <- 33
+# Group by currently have mental disorder
+Age.Re <- mh %>% group_by(age,currently_have_mental_disorder)
+# Calculate counts and frequencies
+library(dplyr)
+freq4 <- Age.Re %>%
+  group_by(age,currently_have_mental_disorder) %>%
+  summarise(n = n()) %>%
+  mutate(freq = n / sum(n))
+freq4
+# Plot Frequencies
+pfreq4 <- ggplot(freq4, aes(x = age, y = freq, fill = currently_have_mental_disorder)) + geom_bar(stat = "identity") +  xlab("Age") + ylab("Frequency") 
+ggplotly(pfreq4)
+# Is there any relationship between Company Size and Mental Disorder?
+# H0:NO
+# H1:YES
+chisq.test(table(mh$age,mh$currently_have_mental_disorder))
+```
+Based the result of chi-squared, reject H0, there's no relationship between age and mental disorder.
